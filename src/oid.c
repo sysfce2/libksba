@@ -163,19 +163,13 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
 }
 
 
-/**
- * ksba_oid_from_str:
- * @string: A string with the OID in dotted decimal form
- * @rbuf:   Returns the DER encoded OID
- * @rlength: and its length
+/* Converts an object-identifier given in dotted decimal form in
+ * STRING to an DER encoding and returns this at the allocated buffer
+ * RBUF with its length at RLENGTH.  RBUF is set to NULL in case an
+ * error is returned.  Scanning stops at the first white space.
  *
- * Convertes the OID given in dotted decimal form to an DER encoding
- * and returns it in allocated buffer rbuf and its length in rlength.
- * rbuf is set to NULL in case an error is returned.
- * Scanning stops at the first white space.
- *
- * The caller must free the returned buffer using ksba_free() or the
- * function he has registered as a replacement.
+ * The caller must free the returned buffer using ksba_free or the
+ * function which has been registered as a replacement.
  *
  * Return value: 0 on success or an error value
  **/

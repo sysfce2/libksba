@@ -2826,7 +2826,10 @@ store_smime_capability_sequence (AsnNode node,
 
   for (cap=capabilities; cap; cap = cap->next)
     {
-      /* (avoid writing duplicates) */
+      /* Note that we do not use the unprotected and signeridx fields
+       * here.  */
+
+      /* We want to avoid writing duplicates. */
       for (cap2=capabilities; cap2 != cap; cap2 = cap2->next)
         {
           if (!strcmp (cap->oid, cap2->oid)

@@ -846,8 +846,8 @@ parse_to_next_update (ksba_crl_t crl)
           tbs_len -= ti.length;
         }
       /* fixme: we should also check the outer data length here and in
-         the follwing code.  It might however be easier to to thsi at
-         the end of this sequence */
+         the follwing code.  It might however be easier to to this at
+         the end of this sequence.  */
       if (ti.length != 1)
         return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION);
       if ( (c=read_byte (crl->reader)) == -1)
@@ -926,9 +926,7 @@ parse_to_next_update (ksba_crl_t crl)
       }
   }
 
-
-
-  /* read the thisUpdate time */
+  /* Read the thisUpdate time.  */
   err = _ksba_ber_read_tl (crl->reader, &ti);
   if (err)
     return err;
@@ -955,7 +953,7 @@ parse_to_next_update (ksba_crl_t crl)
   _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length,
                         ti.tag == TYPE_UTC_TIME, crl->this_update);
 
-  /* Read the optional nextUpdate time. */
+  /* Read the optional nextUpdate time.  */
   err = _ksba_ber_read_tl (crl->reader, &ti);
   if (err)
     return err;
