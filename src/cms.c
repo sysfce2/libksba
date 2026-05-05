@@ -948,6 +948,8 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
           return gpg_error (GPG_ERR_GENERAL);
         }
 
+      if (n->len > MAX_SERIALNO_LENGTH)
+        return gpg_error (GPG_ERR_INV_CERT_OBJ);
       sprintf (numbuf,"(%u:", (unsigned int)n->len);
       numbuflen = strlen (numbuf);
       p = xtrymalloc (numbuflen + n->len + 2);

@@ -518,6 +518,9 @@ ksba_cert_get_serial (ksba_cert_t cert)
       return NULL;
     }
 
+  if (n->len > MAX_SERIALNO_LENGTH)
+    return NULL;
+
   sprintf (numbuf,"(%u:", (unsigned int)n->len);
   numbuflen = strlen (numbuf);
   p = xtrymalloc (numbuflen + n->len + 2);
@@ -1920,6 +1923,8 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   if (ti.tag != 2 || !derlen)
     return gpg_error (GPG_ERR_INV_CERT_OBJ);
 
+  if (ti.length > MAX_SERIALNO_LENGTH)
+    return gpg_error (GPG_ERR_INV_CERT_OBJ);
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *r_serial = xtrymalloc (numbuflen + ti.length + 2);
@@ -1933,6 +1938,8 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
  build_keyid:
   if (r_keyid && keyid_der && keyid_derlen)
     {
+      if (keyid_derlen > MAX_KEYID_DER_LENGTH)
+        return gpg_error (GPG_ERR_INV_CERT_OBJ);
       sprintf (numbuf,"(%u:", (unsigned int)keyid_derlen);
       numbuflen = strlen (numbuf);
       *r_keyid = xtrymalloc (numbuflen + keyid_derlen + 2);
@@ -2008,6 +2015,8 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
   if (ti.length != derlen)
     return gpg_error (GPG_ERR_INV_CERT_OBJ); /* Garbage follows. */
 
+  if (ti.length > MAX_CERT_EXT_LENGTH)
+    return gpg_error (GPG_ERR_INV_CERT_OBJ);
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *r_data = xtrymalloc (numbuflen + ti.length + 2);

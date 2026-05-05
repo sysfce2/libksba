@@ -45,6 +45,13 @@ struct tag_info {
 };
 
 
+/* Maximum length of certain object to avoid excessive memory
+ * allocation.  Make sure that they are below 2^31.  */
+#define MAX_SERIALNO_LENGTH       (1 * 1024)
+#define MAX_KEYID_DER_LENGTH      (4 * 1024)
+#define MAX_CERT_EXT_LENGTH       (2 * 1024*1024)
+
+
 gpg_error_t _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti);
 gpg_error_t _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
                                 struct tag_info *ti);
