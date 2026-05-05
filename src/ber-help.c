@@ -182,7 +182,7 @@ _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
       ti->length = len;
     }
 
-  if (ti->length > ti->nhdr && (ti->nhdr + ti->length) < ti->length)
+  if ((ti->nhdr + ti->length) < ti->length)
     {
       ti->err_string = "header+length would overflow";
       return gpg_error (GPG_ERR_EOVERFLOW);
