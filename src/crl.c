@@ -378,6 +378,8 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   if (ti.tag != 2 || !derlen)
     return gpg_error (GPG_ERR_INV_CRL_OBJ);
 
+  if (ti.length > MAX_SERIALNO_LENGTH)
+    return gpg_error (GPG_ERR_INV_CERT_OBJ);
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *r_serial = xtrymalloc (numbuflen + ti.length + 2);
@@ -391,6 +393,8 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
  build_keyid:
   if (r_keyid && keyid_der && keyid_derlen)
     {
+      if (keyid_derlen > MAX_KEYID_DER_LENGTH)
+        return gpg_error (GPG_ERR_INV_CERT_OBJ);
       sprintf (numbuf,"(%u:", (unsigned int)keyid_derlen);
       numbuflen = strlen (numbuf);
       *r_keyid = xtrymalloc (numbuflen + keyid_derlen + 2);
@@ -445,6 +449,8 @@ ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
   if (err)
     return err;
 
+  if (ti.length > MAX_CRL_NUMBER_LENGTH)
+    return gpg_error (GPG_ERR_TOO_LARGE);
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *number = xtrymalloc (numbuflen + ti.length + 2);
@@ -1134,6 +1140,8 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
     return err;
   HASH (tmpbuf, ti.nhdr+ti.length);
 
+  if (ti.length > MAX_SERIALNO_LENGTH)
+    return gpg_error (GPG_ERR_TOO_LARGE);
   xfree (crl->item.serial);
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);

@@ -50,6 +50,8 @@ struct tag_info {
 #define MAX_SERIALNO_LENGTH       (1 * 1024)
 #define MAX_KEYID_DER_LENGTH      (4 * 1024)
 #define MAX_CERT_EXT_LENGTH       (2 * 1024*1024)
+#define MAX_CRL_NUMBER_LENGTH     (256)
+#define MAX_NAME_URL_LENGTH       (4 * 1024)
 
 
 gpg_error_t _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti);

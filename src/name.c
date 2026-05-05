@@ -192,6 +192,11 @@ _ksba_name_new_from_der (ksba_name_t *r_name,
           name->names[n++] = p;
           break;
         case 6: /* URI */
+          if (ti.length > MAX_NAME_URL_LENGTH)
+            {
+              ksba_name_release (name);
+              return gpg_error (GPG_ERR_INV_URI);
+            }
           sprintf (numbuf, "%u:", (unsigned int)ti.length);
           p = name->names[n] = xtrymalloc (1+5+strlen (numbuf)
                                            + ti.length +1+1);

@@ -1623,6 +1623,8 @@ ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
       char numbuf[50];
       size_t numbuflen;
 
+      if (ocsp->responder_id.keyidlen > MAX_KEYID_DER_LENGTH)
+        return gpg_error (GPG_ERR_TOO_LARGE);
       sprintf (numbuf,"(%lu:", (unsigned long)ocsp->responder_id.keyidlen);
       numbuflen = strlen (numbuf);
       *r_keyid = xtrymalloc (numbuflen + ocsp->responder_id.keyidlen + 2);
