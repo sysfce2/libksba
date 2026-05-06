@@ -206,7 +206,7 @@ _ksba_der_copy_tree (AsnNode dst_root,
 
   s = src_root;
   d = dst_root;
-  /* note: we use the is_any flags becuase an inserted copy may have
+  /* Note: we use the is_any flags because an inserted copy may have
      already changed the any tag to the actual type */
   while (s && d && (s->type == d->type || d->flags.is_any))
     {
@@ -445,7 +445,7 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
   node->nhdr = buflen;
 }
 
-/* Like above but put now put it into buffer.  return the number of
+/* Like above but now put it into buffer.  Returns the number of
    bytes copied.  There is no need to do length checking here */
 static size_t
 copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
@@ -583,7 +583,7 @@ _ksba_der_encode_tree (AsnNode root,
   /* set off to zero, so that it can be dumped */
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
       n->off = 0;
-  fputs ("DER encoded value Tree:\n", stderr);
+  fprintf (stderr, "%s: DER encoded value tree:\n", __func__);
   _ksba_asn_node_dump_all (root, stderr);
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
       n->off = -1;

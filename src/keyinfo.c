@@ -637,7 +637,12 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen, int firsttag,
     return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not an OBJECT IDENTIFIER */
   TLV_LENGTH(der);
 
-  /* der does now point to an oid of length LEN */
+  /* DER does now point to an oid of length LEN */
+  /* { */
+  /*   char *p = ksba_oid_to_str (der, len); */
+  /*   gpgrt_log_debug ("%s: algorithm: %s\n", __func__, p); */
+  /*   xfree (p); */
+  /* } */
   *r_pos = der - start;
   *r_len = len;
   der += len;
@@ -666,6 +671,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen, int firsttag,
       else if (r_parm_pos && r_parm_len && c == 0x04)
         {
           /*  This is an octet string parameter and we need it.  */
+          /* gpgrt_log_debug ("%s: parameter: an octet string\n", __func__); */
           if (r_parm_type)
             *r_parm_type = TYPE_OCTET_STRING;
           TLV_LENGTH(der);
@@ -679,6 +685,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen, int firsttag,
       else if (r_parm_pos && r_parm_len && c == 0x06)
         {
           /*  This is an object identifier.  */
+          /* gpgrt_log_debug ("%s: parameter: an OID\n", __func__); */
           if (r_parm_type)
             *r_parm_type = TYPE_OBJECT_ID;
           TLV_LENGTH(der);
@@ -692,6 +699,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen, int firsttag,
       else if (r_parm_pos && r_parm_len && c == 0x30)
         {
           /*  This is a sequence. */
+          /* gpgrt_log_debug ("%s: parameter: a sequence\n", __func__); */
           if (r_parm_type)
             *r_parm_type = TYPE_SEQUENCE;
           TLV_LENGTH(der);
@@ -704,7 +712,8 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen, int firsttag,
         }
       else
         {
-/*            printf ("parameter: with tag %02x - ignored\n", c); */
+          /* gpgrt_log_debug ("%s: parameter: with tag %02x - ignored\n", */
+          /*                  __func__, c); */
           TLV_LENGTH(der);
           seqlen -= der - startparm;
           /* skip the value */
@@ -925,7 +934,8 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
         }
       c = *der++; derlen--;
       if (c)
-        fprintf (stderr, "warning: number of unused bits is not zero\n");
+        gpgrt_log_info ("%s: warning: number of unused bits is not zero\n",
+                        __func__);
     }
 
   /* fixme: we should calculate the initial length form the size of the
@@ -1631,7 +1641,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
         return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
       if (c)
-        fprintf (stderr, "warning: number of unused bits is not zero\n");
+        gpgrt_log_debug ("%s: warning: number of unused bits is not zero\n",
+                         __func__);
     }
 
   /* fixme: we should calculate the initial length form the size of the
