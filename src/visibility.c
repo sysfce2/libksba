@@ -502,6 +502,13 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
   return _ksba_cms_add_smime_capability (cms, oid, der, derlen);
 }
 
+gpg_error_t
+ksba_cms_add_attribute (ksba_cms_t cms, int idx,
+                        const char *oid, int unprotected,
+                        const unsigned char *der, size_t derlen)
+{
+  return _ksba_cms_add_attribute (cms, idx, oid, unprotected, der, derlen);
+}
 
 gpg_error_t
 ksba_cms_set_message_digest (ksba_cms_t cms, int idx,

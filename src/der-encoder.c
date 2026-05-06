@@ -386,6 +386,21 @@ _ksba_der_store_sequence (AsnNode node, const unsigned char *buf, size_t len)
 
 
 gpg_error_t
+_ksba_der_store_set_of (AsnNode node, const unsigned char *buf, size_t len)
+{
+  if (node->type == TYPE_ANY)
+    node->type = TYPE_PRE_SET_OF;
+
+  if (node->type == TYPE_SET_OF || node->type == TYPE_PRE_SET_OF)
+    {
+      return store_value (node, buf, len);
+    }
+  else
+    return gpg_error (GPG_ERR_INV_VALUE);
+}
+
+
+gpg_error_t
 _ksba_der_store_null (AsnNode node)
 {
   if (node->type == TYPE_ANY)
@@ -420,6 +435,8 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
     buflen++;
   else if (node->type < 0x1f || node->type == TYPE_PRE_SEQUENCE)
     buflen++;
+  else if(node->type == TYPE_PRE_SET_OF)
+    ;
   else
     {
       never_reached ();
@@ -430,6 +447,8 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
     buflen++; /* end tag */
   else if (node->type == TYPE_NULL /*&& !class*/)
     buflen++; /* NULL tag */
+  else if (node->type == TYPE_PRE_SET_OF)
+    ;
   else if (!length)
     buflen++; /* indefinite length */
   else if (length < 128)
@@ -454,11 +473,16 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
   int tag, class;
   unsigned long length;
 
+  if (node->type == TYPE_PRE_SET_OF)
+    return node->len;
+
   tag = node->type;
   class = CLASS_UNIVERSAL;
   length = node->len;
 
   if (tag == TYPE_SET_OF)
+    tag = TYPE_SET;
+  else if (tag == TYPE_PRE_SET_OF)
     tag = TYPE_SET;
   else if (tag == TYPE_SEQUENCE_OF)
     tag = TYPE_SEQUENCE;
@@ -466,7 +490,7 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
     tag = TYPE_SEQUENCE;
   else if (tag == TYPE_TAG)
     {
-      class = CLASS_CONTEXT;  /* Hmmm: we no way to handle other classes */
+      class = CLASS_CONTEXT;  /* Hmmm: no way to handle other classes */
       tag = node->value.v_ulong;
     }
   if (tag < 0x1f)
@@ -598,21 +622,35 @@ _ksba_der_encode_tree (AsnNode root,
     {
       size_t nbytes;
 
-      if (!n->nhdr)
+      if (n->type == TYPE_PRE_SET_OF)
+        ;  /* Copying buffer verbatim.  */
+      else if (!n->nhdr)
         continue;
+
       assert (n->off == -1);
       assert (len < imagelen);
       n->off = len;
-      nbytes = copy_nhdr_and_len (image+len, n);
-      len += nbytes;
-      if ( _ksba_asn_is_primitive (n->type)
-           && n->valuetype == VALTYPE_MEM
-           && n->value.v_mem.len )
+      if (n->type == TYPE_PRE_SET_OF)
         {
+          assert (n->valuetype == VALTYPE_MEM);
           nbytes = n->value.v_mem.len;
           assert (len + nbytes <= imagelen);
           memcpy (image+len, n->value.v_mem.buf, nbytes);
           len += nbytes;
+        }
+      else
+        {
+          nbytes = copy_nhdr_and_len (image+len, n);
+          len += nbytes;
+          if ( _ksba_asn_is_primitive (n->type)
+               && n->valuetype == VALTYPE_MEM
+               && n->value.v_mem.len )
+            {
+              nbytes = n->value.v_mem.len;
+              assert (len + nbytes <= imagelen);
+              memcpy (image+len, n->value.v_mem.buf, nbytes);
+              len += nbytes;
+            }
         }
     }
 

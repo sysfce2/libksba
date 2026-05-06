@@ -637,6 +637,13 @@ ksba_cms_release (ksba_cms_t cms)
       xfree (cms->capability_list);
       cms->capability_list = tmp;
     }
+  while (cms->attribute_list)
+    {
+      struct oidparmlist_s *tmp = cms->attribute_list->next;
+      xfree (cms->attribute_list->oid);
+      xfree (cms->attribute_list);
+      cms->attribute_list = tmp;
+    }
 
   xfree (cms);
 }
@@ -1893,6 +1900,8 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
   opl = xtrymalloc (sizeof *opl + derlen - 1);
   if (!opl)
     return gpg_error_from_errno (errno);
+  opl->unprotected = 0;
+  opl->signeridx = 0;
   opl->next = NULL;
   opl->oid = xtrystrdup (oid);
   if (!opl->oid)
@@ -1918,6 +1927,69 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
   return 0;
 }
 
+/* Add an arbitrary attribute to the message.  CMS is the context, OID
+ * the object identifier of the attribute and (DER,DERLEN) is the
+ * DER-encoded content which is put into a SET.  Thus DER may be a
+ * straight concatenation of ASN.1 objects w/o the outer container.
+ *
+ * The attribute is store stored for the signer with IDX or with an
+ * IDX of -1 for all signers.  The index of a signer is determined by
+ * the sequence of ksba_cms_add_signer() calls; the first signer has
+ * the index 0.
+ *
+ * If UNPROTECTED is set the attribute will be stored in the unsigned
+ * section.
+ *
+ * No merging of attributes is done, thus the caller should not call it
+ * twice with the same OID.  Note that this function is a generalized
+ * version of ksba_cms_add_smime_capability.
+ *
+ * The function returns 0 on success or an error code.
+ */
+gpg_error_t
+ksba_cms_add_attribute (ksba_cms_t cms, int idx,
+                        const char *oid, int unprotected,
+                        const unsigned char *der, size_t derlen)
+{
+  gpg_error_t err;
+  struct oidparmlist_s *opl;
+
+  if (!cms || !oid || unprotected < 0 || unprotected > 1 || !der || !derlen)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  if (idx < -1)
+    return gpg_error (GPG_ERR_INV_INDEX);
+  else if (idx >= 0)
+    {
+      struct certlist_s *cl;
+      int i;
+
+      for (i=0, cl = cms->cert_list; cl; cl = cl->next, i++)
+        if (i == idx)
+          break;
+      if (!cl)
+        return gpg_error (GPG_ERR_INV_INDEX);
+    }
+
+  opl = xtrymalloc (sizeof *opl + derlen - 1);
+  if (!opl)
+    return gpg_error_from_syserror ();
+  opl->unprotected = unprotected;
+  opl->signeridx = idx;
+  opl->oid = xtrystrdup (oid);
+  if (!opl->oid)
+    {
+      err = gpg_error_from_syserror ();
+      xfree (opl);
+      return err;
+    }
+  opl->parmlen = derlen;
+  memcpy (opl->parm, der, derlen);
+
+  opl->next = cms->attribute_list;
+  cms->attribute_list = opl;
+
+  return 0;
+}
 
 
 /* If CMS is used for signed data, this function sets the message
@@ -2909,12 +2981,12 @@ build_signed_data_attributes (ksba_cms_t cms)
   struct certlist_s *certlist;
   struct oidlist_s *digestlist;
   struct signer_info_s *si, **si_tail;
+  struct oidparmlist_s *opl;
   AsnNode root = NULL;
-  struct attrarray_s attrarray[4];
+  struct attrarray_s *attrarray = NULL;
+  unsigned int attrsize;
   int attridx = 0;
   int i;
-
-  memset (attrarray, 0, sizeof (attrarray));
 
   /* Write the End tag */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
@@ -2924,6 +2996,25 @@ build_signed_data_attributes (ksba_cms_t cms)
   if (cms->signer_info)
     return gpg_error (GPG_ERR_CONFLICT); /* This list must be empty at
                                             this point. */
+
+  /* Allocate four slots for the standard attributes:
+   *  - msg_digest
+   *  - inner_content_type
+   *  - signing time (optional)
+   *  - s/mime capabilities (optional)
+   */
+  attrsize = 4;
+  /* Add more slots for extra attributes.  */
+  for (opl = cms->attribute_list; opl; opl = opl->next)
+    attrsize++;
+
+  attrarray = xtrycalloc (attrsize, sizeof *attrarray);
+  if (!attrarray)
+    {
+      err = gpg_error_from_syserror ();
+      goto leave;
+    }
+
 
   /* Write optional certificates */
   if (cms->cert_info_list)
@@ -2991,7 +3082,7 @@ build_signed_data_attributes (ksba_cms_t cms)
           xfree (attrarray[i].image);
         }
       attridx = 0;
-      memset (attrarray, 0, sizeof (attrarray));
+      memset (attrarray, 0, attrsize * sizeof *attrarray);
 
       if (!digestlist)
         {
@@ -3151,6 +3242,52 @@ build_signed_data_attributes (ksba_cms_t cms)
           attridx++;
         }
 
+      for (opl = cms->attribute_list; opl; opl = opl->next)
+        {
+          if (opl->unprotected)
+            continue;
+          if (!(opl->signeridx == -1 || opl->signeridx == signer))
+            continue;
+          attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
+                                        "CryptographicMessageSyntax.Attribute");
+          if (!attr)
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
+          n = _ksba_asn_find_node (attr, "Attribute.attrType");
+          if (!n)
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
+          err = _ksba_der_store_oid (n, opl->oid);
+          if (err)
+            goto leave;
+          n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+          if (!n || !n->down)
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
+          n = n->down;
+          /* gpgrt_log_printhex (opl->parm, opl->parmlen, */
+          /*                     "signer %d, oid=%s der=", signer, opl->oid); */
+          err = _ksba_der_store_set_of (n, opl->parm, opl->parmlen);
+          if (err)
+            goto leave;
+
+          err = _ksba_der_encode_tree (attr, &image, &imagelen);
+          if (err)
+            goto leave;
+
+          assert (attridx < attrsize);
+          attrarray[attridx].root = attr;
+          attrarray[attridx].image = image;
+          attrarray[attridx].imagelen = imagelen;
+          attridx++;
+        }
+
       /* Arggh.  That silly ASN.1 DER encoding rules: We need to sort
          the SET values. */
       qsort (attrarray, attridx, sizeof (struct attrarray_s),
@@ -3175,7 +3312,7 @@ build_signed_data_attributes (ksba_cms_t cms)
 	  goto leave;
 	}
 
-      assert (attridx <= DIM (attrarray));
+      assert (attridx <= attrsize);
       for (i=0; i < attridx; i++)
         {
           if (i)

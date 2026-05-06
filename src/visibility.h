@@ -118,6 +118,7 @@
 #define ksba_cms_set_sig_val               _ksba_cms_set_sig_val
 #define ksba_cms_set_signing_time          _ksba_cms_set_signing_time
 #define ksba_cms_add_smime_capability      _ksba_cms_add_smime_capability
+#define ksba_cms_add_attribute             _ksba_cms_add_attribute
 
 #define ksba_crl_get_digest_algo           _ksba_crl_get_digest_algo
 #define ksba_crl_get_issuer                _ksba_crl_get_issuer
@@ -325,6 +326,7 @@ int ksba_asn_delete_structure (void *dummy);
 #undef ksba_cms_set_sig_val
 #undef ksba_cms_set_signing_time
 #undef ksba_cms_add_smime_capability
+#undef ksba_cms_add_attribute
 
 #undef ksba_crl_get_digest_algo
 #undef ksba_crl_get_issuer
@@ -501,6 +503,7 @@ MARK_VISIBLE (ksba_cms_set_reader_writer)
 MARK_VISIBLE (ksba_cms_set_sig_val)
 MARK_VISIBLE (ksba_cms_set_signing_time)
 MARK_VISIBLE (ksba_cms_add_smime_capability)
+MARK_VISIBLE (ksba_cms_add_attribute)
 
 MARK_VISIBLE (ksba_crl_get_digest_algo)
 MARK_VISIBLE (ksba_crl_get_issuer)

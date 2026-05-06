@@ -69,6 +69,8 @@ struct oidlist_s {
 /* A structure to store an OID and a parameter. */
 struct oidparmlist_s {
   struct oidparmlist_s *next;
+  int unprotected;   /* Used by ksba_cms_add_attribute.  */
+  int signeridx;     /* Used by ksba_cms_add_attribute.  */
   char *oid;
   size_t parmlen;
   unsigned char parm[1];
@@ -156,6 +158,8 @@ struct ksba_cms_s {
                                         to be send with a signed message */
 
   struct oidparmlist_s *capability_list; /* A list of S/MIME capabilities. */
+
+  struct oidparmlist_s *attribute_list;  /* A list of other attributes.    */
 
   struct signer_info_s *signer_info;
 
